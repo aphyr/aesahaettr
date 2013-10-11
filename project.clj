@@ -1,6 +1,6 @@
-(defproject æsahættr "0.1.0-SNAPSHOT"
+(defproject aesahaettr "0.1.0-SNAPSHOT"
   :description "Sharding, partitioning, and consistent hashing. May release spectres."
-  :url "http://github.com/aphyr/æsahættr"
+  :url "http://github.com/aphyr/aesahaettr"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :global-vars {*warn-on-reflection* true}

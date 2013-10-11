@@ -5,6 +5,8 @@
 > "What does it do, Carlo? Why is it special?"
 >
 > "Ah... It's the knife that will cut anything. Not even its makers knew what it could do. Nothing, no one, matter, spirit, angel, air--nothing is invulnerable to the subtle knife."
+>
+> —Philip Pullman, "The Subtle Knife"
 
 Æsahættr supports consistent, stable hashing, oriented towards use in
 probabilistic data structures and distributed systems. It wraps Guava's hashing
@@ -23,6 +25,10 @@ On the other hand, Æsahættr will probably be an order of magnitude slower than
 ns via .hashcode, but 370 ns via Æsahættr murmer3-32, with a custom funnel.
 Hashing via nippy is another ~30x slower, at 12 µs. Still, we're within the
 realm of acceptable performance for many purposes.
+
+## Installation
+
+https://clojars.org/aesahaettr
 
 ## Usage
 

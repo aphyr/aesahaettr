@@ -78,6 +78,6 @@ https://clojars.org/aesahaettr
 
 ## License
 
-Copyright © 2013 FIXME
+Copyright © 2013 Kyle Kingsbury
 
 Distributed under the Eclipse Public License, the same as Clojure.

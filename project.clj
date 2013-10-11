@@ -1,4 +1,4 @@
-(defproject aesahaettr "0.1.0-SNAPSHOT"
+(defproject aesahaettr "0.1.0"
   :description "Sharding, partitioning, and consistent hashing. May release spectres."
   :url "http://github.com/aphyr/aesahaettr"
   :license {:name "Eclipse Public License"

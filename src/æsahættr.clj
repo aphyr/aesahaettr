@@ -66,12 +66,74 @@
   ([^HashFunction hash-function char-sequence charset]
    (.hashString hash-function char-sequence charset)))
 
+(declare fast-funnel)
+
+(defn hash-object
+  "Hashes arbitrary objects using the given funnel, or Nippy if omitted.
+  
+  Note that nippy is *much* slower (~25x for a two-element map) than providing
+  your own Funnel!"
+  ([^HashFunction hash-function object]
+   (.hashObject hash-function object fast-funnel))
+  ([^HashFunction hash-function funnel object]
+   (.hashObject hash-function object funnel)))
+
 (def nippy-funnel
   "Allows the hashing of arbitrary data structures by serializing them with
   Nippy."
   (reify Funnel
     (^void funnel [_ obj ^PrimitiveSink sink]
       (.putBytes sink (nippy/freeze obj)))))
+
+(defprotocol FastFunnel
+  (fast-funnel! [obj sink]))
+
+(def fast-funnel
+  "Hashes sequences by simply writing each successive element to the underlying
+  sink. This is an order of magnitude faster than Nippy, but can lead to a
+  higher probability of hash collisions for specially structured collections.
+  For example, [\"foo\" \"bar\"] and [\"f\" \"oobar\"] have the same hash."
+  (reify Funnel
+    (^void funnel [_ obj ^PrimitiveSink sink]
+      (fast-funnel! obj sink))))
+
+(extend-protocol FastFunnel
+  Boolean               (fast-funnel! [x ^PrimitiveSink s] (.putBoolean s x))
+  Short                 (fast-funnel! [x ^PrimitiveSink s] (.putShort s x))
+  Integer               (fast-funnel! [x ^PrimitiveSink s] (.putInt s x))
+  Long                  (fast-funnel! [x ^PrimitiveSink s] (.putLong s x))
+  Byte                  (fast-funnel! [x ^PrimitiveSink s] (.putByte s x))
+  String                (fast-funnel! [x ^PrimitiveSink s]
+                          (.putBytes s (.getBytes x "UTF-8")))
+
+  clojure.lang.Keyword  (fast-funnel! [x ^PrimitiveSink s]
+                          (fast-funnel! (name x) s))
+  
+  clojure.lang.MapEntry (fast-funnel! [pair ^PrimitiveSink s]
+                          (fast-funnel! (key pair) s)
+                          (fast-funnel! (val pair) s))
+
+  clojure.lang.IPersistentMap (fast-funnel! [m ^PrimitiveSink s]
+                                (if (sorted? m)
+                                  (fast-funnel! (seq m) s)
+                                  ; Should use a commutative hash instead,
+                                  ; but we don't know which hashfn is being
+                                  ; used at this point. Need to thread it
+                                  ; through the funnel calls, I guess.
+                                  (fast-funnel! (sort m) s)))
+
+  clojure.lang.IPersistentSet (fast-funnel! [set ^PrimitiveSink s]
+                                (if (sorted? set)
+                                  (fast-funnel! (seq set) s)
+                                  (fast-funnel! (sort set) s)))
+
+  clojure.lang.Sequential (fast-funnel! [xs ^PrimitiveSink s]
+                            (doseq [x xs]
+                              (fast-funnel! x s)))
+  )
+
+(extend-protocol FastFunnel
+  (Class/forName "[B")  (fast-funnel! [x ^PrimitiveSink s] (.putBytes s x)))
 
 (defn funnel-expr
   "Helper for the funnel macro. Given a sink symbol, a type symbol, and an
@@ -105,13 +167,3 @@
     `(reify Funnel
        (^void ~'funnel [funnel# ~source ^PrimitiveSink ~sink]
          ~@(map (partial apply funnel-expr sink) (partition 2 pairs))))))
-
-(defn hash-object
-  "Hashes arbitrary objects using the given funnel, or Nippy if omitted.
-  
-  Note that nippy is *much* slower (~25x for a two-element map) than providing
-  your own Funnel!"
-  ([^HashFunction hash-function object]
-   (.hashObject hash-function object nippy-funnel))
-  ([^HashFunction hash-function funnel object]
-   (.hashObject hash-function object funnel)))

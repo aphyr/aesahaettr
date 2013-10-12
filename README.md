@@ -20,12 +20,6 @@ suitable for use in distributed systems. Object.hashcode is 32 bits, and while
 quite fast, often has poor dispersal. Æsahættr can generate hashes of
 significantly higher entropy and with improved uniformity.
 
-On the other hand, Æsahættr will probably be an order of magnitude slower than
-.hashcode. Hashing an object like `{:weight 12 :color "blue"}` takes about 30
-ns via .hashcode, but 370 ns via Æsahættr murmer3-32, with a custom funnel.
-Hashing via nippy is another ~30x slower, at 12 µs. Still, we're within the
-realm of acceptable performance for many purposes.
-
 ## Installation
 
 https://clojars.org/aesahaettr
@@ -60,10 +54,23 @@ https://clojars.org/aesahaettr
 (consistent 1024 (hash-string (murmur3-32) "foo"))
 574
 
-; To hash compound datatypes, Æsahættr will serialize the object to bytes using
-; Nippy, and hash those bytes. This is pretty slow, but minimizes the chance of
-; collisions for variable-width structures with low entropy.
-(hash-object (murmur3-32) {:weight 12 :color "blue"})
+; Æsahættr knows how to hash the common Clojure datatypes, including lists,
+; vectors, sets, maps, and lazy seqs.
+(hash-object (murmur3-128) #{[1 2 {:foo 3}]})
+#<BytesHashCode f1bb5c87662227499cb925317908db15>
+
+; This is reasonably fast, but can cause collisions when collections contain
+; elements whose sequential byte representation is identical.
+user=> (hash-object (murmur3-128) ["a" "bcd"])
+#<BytesHashCode 4fcd5646d6b77bb875e87360883e00f2>
+user=> (hash-object (murmur3-128) ["ab" "cd"])
+#<BytesHashCode 4fcd5646d6b77bb875e87360883e00f2>
+
+; To hash compound datatypes, Æsahættr can serialize the object to bytes
+; Nippy, and hash those bytes. This is an order of magnitude faster than the
+default fast-funnel, but minimizes the chance of collisions for
+variable-width structures with low entropy.
+(hash-object (murmur3-32) nippy-funnel {:weight 12 :color "blue"})
 #<IntHashCode ea82010b>
 
 ; It's much faster to define a custom *funnel*, which writes primitive values
@@ -75,6 +82,19 @@ https://clojars.org/aesahaettr
 (hash-object (murmur3-32) cat-funnel {:weight 12 :color "blue"})
 #<IntHashCode 82ba126b>
 ```
+## Performance
+
+The builtin Java hashcode `(hash)` is the undisputed king, but has poor
+dispersal. Next fastest are custom funnels, followed by the default
+fast-funnel, followed by Nippy.
+
+For the object {:weight 12 :color "blue"}, on a 2GHz i7-3537U, 4MB cache,
+single-core throughput for hashing the same object is roughly:
+
+.hashcode:    breaks criterium
+custom:       ~ 3,500,000 hashes/sec/core
+fast-funnel:  ~   270,000 hashes/sec/core
+nippy-funnel: ~    84,000 hashes/sec/core
 
 ## License
 

@@ -1,4 +1,4 @@
-(defproject aesahaettr "0.1.0"
+(defproject aesahaettr "0.1.1"
   :description "Sharding, partitioning, and consistent hashing. May release spectres."
   :url "http://github.com/aphyr/aesahaettr"
   :license {:name "Eclipse Public License"
@@ -8,4 +8,4 @@
                  [com.google.guava/guava "15.0"]
                  [com.taoensso/nippy "2.1.0"]]
   :profiles {:dev {:dependencies [[criterium "0.4.1"]
-                                  [reiddraper/simple-check "0.4.1"]]}})
+                                  [reiddraper/simple-check "0.5.0-SNAPSHOT"]]}})

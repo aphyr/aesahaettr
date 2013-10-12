@@ -91,10 +91,12 @@ fast-funnel, followed by Nippy.
 For the object {:weight 12 :color "blue"}, on a 2GHz i7-3537U, 4MB cache,
 single-core throughput for hashing the same object is roughly:
 
+```
 .hashcode:    breaks criterium
 custom:       ~ 3,500,000 hashes/sec/core
 fast-funnel:  ~   270,000 hashes/sec/core
 nippy-funnel: ~    84,000 hashes/sec/core
+```
 
 ## License
 

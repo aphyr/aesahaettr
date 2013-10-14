@@ -20,21 +20,27 @@
 ;    (criterium/quick-bench (hash-string (murmur3-32) s))
 ;    (criterium/quick-bench (hash-bytes  (murmur3-32) (.getBytes s "UTF-8")))))
 
-(defspec consistent-test
+(defspec consistent-hashcode-test
   100
   (prop/for-all [s gen/string
                  i (gen/choose 1 1024)]
-                (<= 0 (consistent i (hash-string (murmur3-32) s)) (dec i))))
+                (<= 0 (consistent-hashcode i (hash-string (murmur3-32) s)) (dec i))))
+
+(defspec consistent-long-test
+  100
+  (prop/for-all [x gen/int
+                 i (gen/choose 1 1024)]
+                (<= 0 (consistent-long i x) (dec i))))
 
 (defspec hash-object-test
   100
-  (prop/for-all [o1 (gen/vector gen/string)
-                 o2 (gen/vector gen/string)]
-                (and (= (hash-object (md5) o1)
-                        (hash-object (md5) o1))
+  (prop/for-all [o1 (gen/vector gen/int)
+                 o2 (gen/vector gen/int)]
+                (and (= (hash-object (murmur3-128) o1)
+                        (hash-object (murmur3-128) o1))
                      (or (= o1 o2)
-                         (not= (hash-object (md5) o1)
-                               (hash-object (md5) o2))))))
+                         (not= (hash-object (murmur3-128) o1)
+                               (hash-object (murmur3-128) o2))))))
 
 (defspec funnel-test
   100
@@ -121,21 +127,21 @@
       (is (= (h (hash-set "Ea" "FB"))
              (h (hash-set "FB" "Ea")))))))
 
-(deftest hash-object-perf-test
-  (let [f (funnel cat
-                  int    (:weight cat)
-                  string (:color cat))
-        m (murmur3-32)
-        o {:weight 12 :color "blue"}]
+;(deftest hash-object-perf-test
+;  (let [f (funnel cat
+;                  int    (:weight cat)
+;                  string (:color cat))
+;        m (murmur3-32)
+;        o {:weight 12 :color "blue"}]
 
-    (prn "Nippy")
-    (criterium/quick-bench (hash-object m nippy-funnel o))
+;    (prn "Nippy")
+;    (criterium/quick-bench (hash-object m nippy-funnel o))
 
-    (prn "Fast")
-    (criterium/quick-bench (hash-object m fast-funnel o))
+;    (prn "Fast")
+;    (criterium/quick-bench (hash-object m fast-funnel o))
 
-    (prn "Custom")
-    (criterium/quick-bench (hash-object m f o))
+;    (prn "Custom")
+;    (criterium/quick-bench (hash-object m f o))
 
-    (prn ".hashcode")
-    (criterium/quick-bench (hash o))))
+;    (prn ".hashcode")
+;    (criterium/quick-bench (hash o))))

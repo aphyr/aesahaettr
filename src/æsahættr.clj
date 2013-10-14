@@ -9,8 +9,21 @@
                                    Funnel
                                    PrimitiveSink)))
 
-(defn consistent
+
+(defn consistent-hashcode
+  "Maps a hashcode to an integer bucket."
   [buckets ^HashCode hashcode]
+  (Hashing/consistentHash hashcode ^int buckets))
+
+(defn consistent-long
+  "Maps a long to an integer bucket."
+  [buckets ^long hashcode]
+  (Hashing/consistentHash hashcode ^int buckets))
+
+(defn consistent
+  "Maps a long or hashcode to an integer bucket. Uses reflection; use the
+  consistent-hashcode or consistent-long functions for better performance."
+  [buckets hashcode]
   (Hashing/consistentHash hashcode ^int buckets))
 
 (defn hash->long
@@ -53,7 +66,7 @@
 (def ^:static utf-16   (Charset/forName "UTF-16"))
 (def ^:static utf-8    (Charset/forName "UTF-8"))
 
-(defn hash-string
+(defn ^HashCode hash-string
   "Applies a hash function to a character sequence in the given encoding. If no
   charset is provided, defaults to UTF-8, which benchmarks noticably faster for
   strings with a moderate mixture of ascii and multibyte chars. The 2-arity

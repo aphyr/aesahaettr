@@ -6,7 +6,8 @@
             [simple-check.core :as sc]
             [simple-check.generators :as gen]
             [simple-check.properties :as prop])
-  (:import java.nio.charset.Charset))
+  (:import java.nio.charset.Charset
+           (com.google.common.primitives UnsignedBytes)))
 
 (deftest string-test
   (let [s "hello «ταБЬℓσ»"]
@@ -145,3 +146,21 @@
 
 ;    (prn ".hashcode")
 ;    (criterium/quick-bench (hash o))))
+
+(defspec even-bytes-partitioner-test
+  100
+  (let [c (UnsignedBytes/lexicographicalComparator)]
+    (prop/for-all [coll (gen/fmap (partial sort c)
+                                  (gen/such-that not-empty
+                                                 (gen/list gen/bytes)))]
+;                  (prn :coll (map hexdump coll))
+;                  (let [out (->> coll (map (partition-evenly 16 (first coll) (last coll))) doall)]
+;                    (prn :done out))
+;                  true)))
+                  (let [mapping (map (even-bytes-partitioner 16 
+                                                             (first coll)
+                                                             (last coll))
+                                     coll)]
+                    (and (apply <= mapping)
+                         (<= 0 (first mapping))
+                         (< (last mapping) 16))))))

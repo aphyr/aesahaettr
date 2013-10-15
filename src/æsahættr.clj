@@ -1,14 +1,75 @@
 (ns æsahættr
   "Provides functions for consistent hashing and partitioning of data." 
-  (:refer-clojure :exclude [hash])
+  (:refer-clojure :exclude [hash chunk])
   (:require [taoensso.nippy :as nippy])
   (:import (java.nio.charset Charset)
+           (java.util BitSet)
+           (com.google.common.primitives UnsignedBytes)
            (com.google.common.hash Hashing
                                    HashCode
                                    HashFunction
                                    Funnel
                                    PrimitiveSink)))
 
+(defn common-bytes-prefix-size
+  "Given two byte arrays, returns the number of bits in common."
+  [^"[B" a ^"[B" b]
+  (let [len (max (count a) (count b))
+        ; Pad with trailing zeroes
+        a (byte-array (concat a (repeat (- len (count a)) (byte 0))))
+        b (byte-array (concat b (repeat (- len (count b)) (byte 0))))
+        
+        ; Convert to bigints
+        a (BigInteger. 1 a)
+        b (BigInteger. 1 b)
+
+        ; Find differing bits
+        diff (.xor a b)]
+
+    ; Subtract the number of bits after the differing bit, from the total size.
+    (- (* 8 len) (.bitLength diff))))
+
+(declare bindump)
+
+(defn even-bytes-partitioner
+  "Given a target number of subsets, a minimum key, and a maximum key, returns
+  a function which maps byte arrays to an integer in 0..n, in lexicographic
+  order. Useful if you want to keep nearby elements in the sequence in the
+  same hash bucket."
+  [^long n ^"[B" mink ^"[B" maxk]
+  (assert (-> (UnsignedBytes/lexicographicalComparator)
+              (.compare mink maxk)
+              pos?
+              not))
+
+  (let [prefix        (common-bytes-prefix-size mink maxk)
+        required-bits (long (/ (Math/log n) (Math/log 2)))]
+;    (prn :prefix prefix :required-bits required-bits)
+    (fn [^"[B" element]
+;      (prn "bits are " (bindump element))
+      (loop [i 0
+             part 0]
+        (if (<= required-bits i)
+          part
+          (if (let [i (+ prefix i)]
+                (-> element
+                    (aget (quot i 8))           ; Get byte in array
+                    (bit-test (- 7 (mod i 8)))  ; Get bit in byte (reversed)
+                    (try (catch ArrayIndexOutOfBoundsException e false))))
+            (recur (inc i) ^long (bit-set part (- required-bits i 1)))
+            (recur (inc i) part)))))))
+
+
+(defn hexdump [byte-array]
+  (apply str (map #(format "%02x" (bit-and 0xff %)) byte-array)))
+
+(defn bindump [byte-array]
+  (apply str (map (fn [x]
+                    (subs (Integer/toBinaryString
+                            (+ (bit-and 0xFF x)
+                               0x100))
+                          1))
+                  byte-array)))
 
 (defn consistent-hashcode
   "Maps a hashcode to an integer bucket."

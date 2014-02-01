@@ -31,6 +31,11 @@
 
 (declare bindump)
 
+(defn byte-array-comparator
+  "Comparator for byte arrays, lexicographically."
+  []
+  (UnsignedBytes/lexicographicalComparator))
+
 (defn even-bytes-partitioner
   "Given a target number of subsets, a minimum key, and a maximum key, returns
   a function which maps byte arrays to an integer in 0..n, in lexicographic
